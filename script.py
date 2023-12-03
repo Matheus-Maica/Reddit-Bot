@@ -2,7 +2,19 @@ import praw
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import secrets
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+MY_CLIENT_ID = os.getenv("MY_CLIENT_ID")
+MY_CLIENT_SECRET = os.getenv("MY_CLIENT_SECRET")
+MY_USER_AGENT= os.getenv("MY_USER_AGENT")
+MY_REDDIT_USERNAME = os.getenv("MY_REDDIT_USERNAME")
+MY_REDDIT_PASSWORD = os.getenv("MY_REDDIT_PASSWORD")
+RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL")
+SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
 
 SUBREDDIT_TO_EXPLORE = 'askphysics'
 NUM_POSTS_TO_EXPLORE = 10
@@ -27,11 +39,11 @@ def get_keyword_count(_str):
 # Returns tuples containing keyword count, weighted score, post info dict of matching posts
 def get_reddit_posts():
     # Authenticate
-    reddit = praw.Reddit(client_id=secrets.MY_CLIENT_ID,
-                         client_secret=secrets.MY_CLIENT_SECRET,
-                         user_agent=secrets.MY_USER_AGENT,
-                         username=secrets.MY_REDDIT_USERNAME,
-                         password=secrets.MY_REDDIT_PASSWORD)
+    reddit = praw.Reddit(client_id=MY_CLIENT_ID,
+                         client_secret=MY_CLIENT_SECRET,
+                         user_agent=MY_USER_AGENT,
+                         username=MY_REDDIT_USERNAME,
+                         password=MY_REDDIT_PASSWORD)
     # Designate subreddit to explore
     subreddit = reddit.subreddit(SUBREDDIT_TO_EXPLORE)
     matching_posts_info = []
@@ -39,7 +51,7 @@ def get_reddit_posts():
     # Tip: You could also explore top posts, new posts, etc.
     # See https://praw.readthedocs.io/en/latest/getting_started/quick_start.html#obtain-submission-instances-from-a-subreddit
     for submission in subreddit.new(limit=NUM_POSTS_TO_EXPLORE):
-        keyword_count = get_keyword_count(submission.title.lower() + " " + submission.post.lower())
+        keyword_count = get_keyword_count(submission.title.lower())
 
         if keyword_count > 0:
             post_dict = {'title': submission.title, \
@@ -61,7 +73,7 @@ def send_email():
         '<br>' + 'Comments: ' + str(post['comment_count']) + '<br>' + post['url'] + '<br><br>'
     if len(matching_posts_info) > 0:
         email_list = [
-            secrets.RECEIVER_EMAIL
+            RECEIVER_EMAIL
             # Add any other email addresses to send to
         ]
         subject = 'Hey you! I have something SPECIAL for you to check out...'
@@ -70,12 +82,12 @@ def send_email():
         server = smtplib.SMTP('smtp.gmail.com:587')
         server.ehlo()
         server.starttls()
-        server.login(secrets.SENDER_EMAIL, secrets.SENDER_PASSWORD)
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
         for email_address in email_list:
             # Send emails in multiple part messages
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
-            msg['From'] = secrets.SENDER_EMAIL
+            msg['From'] = SENDER_EMAIL
             msg['To'] = email_address
             # HTML of email content
             html = '''\
@@ -94,7 +106,7 @@ def send_email():
             </html>
             ''' % reddit_email_content
             msg.attach(MIMEText(html, 'html'))
-            server.sendmail(secrets.SENDER_EMAIL, email_address, msg.as_string())
+            server.sendmail(SENDER_EMAIL, email_address, msg.as_string())
         server.quit()
 
 if __name__ == "__main__":
